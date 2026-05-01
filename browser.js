@@ -133,8 +133,8 @@
     const tab = {
       id,
       url: url || '',
-      title: url ? 'Loading…' : 'New Tab',
-      favicon: '🌐',
+      title: url ? 'mammicon' : 'New Tab',
+      favicon: 'mammicon',
       history: url ? [url] : [],
       historyIndex: url ? 0 : -1,
       view: url ? (isSearchQuery(url) ? 'results' : 'frame') : 'newtab',
@@ -329,7 +329,7 @@
     tab.url = '';
     tab.view = 'newtab';
     tab.title = 'New Tab';
-    tab.favicon = '🌐';
+    tab.favicon = 'lel';
     addressBar.value = '';
     updateTabTitle(tab);
     updateNavButtons(tab);
@@ -422,8 +422,8 @@
       lockIcon.textContent = '🔒';
       lockIcon.title = 'Secure connection';
     } else {
-      lockIcon.textContent = '⚠️';
-      lockIcon.title = 'Not secure';
+      lockIcon.textContent = '–';  // en dash as "no lock" symbol
+      lockIcon.title = 'secure?';
     }
   }
 
@@ -461,169 +461,81 @@
     addressBar.value = SEARCH_BASE + encodeURIComponent(query);
     updateLock('');
 
-    fetchDDGResults(query)
+    performLocalSearch(query)
       .then(data => renderResults(query, data))
       .catch(() => renderResults(query, null));
   }
 
   /**
-   * Fetches DuckDuckGo Instant Answer API using JSONP (avoids CORS).
-   * Returns a promise that resolves with the parsed JSON object.
+   * Performs a local search through the knowledge base.
+   * Returns results based on keyword matching.
    */
-  function fetchDDGResults(query) {
-    return new Promise((resolve, reject) => {
-      const cbName = '_ddgcb_' + Date.now();
-      const timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error('timeout'));
-      }, DDG_TIMEOUT_MS);
+  function performLocalSearch(query) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const normalized = query.toLowerCase().trim();
+        const results = [];
 
-      function cleanup() {
-        clearTimeout(timeout);
-        delete window[cbName];
-        const s = document.getElementById(DDG_SCRIPT_ID);
-        if (s) s.remove();
-      }
+        // Search through knowledge base
+        Object.keys(KNOWLEDGE_BASE).forEach(keyword => {
+          if (keyword.includes(normalized) || normalized.includes(keyword)) {
+            results.push(...KNOWLEDGE_BASE[keyword]);
+          }
+        });
 
-      window[cbName] = function(data) {
-        cleanup();
-        resolve(data);
-      };
+        // Also check for word matches within descriptions
+        if (results.length < 3) {
+          Object.values(KNOWLEDGE_BASE).forEach(items => {
+            items.forEach(item => {
+              if ((item.title.toLowerCase().includes(normalized) || 
+                   item.snippet.toLowerCase().includes(normalized)) &&
+                  !results.find(r => r.url === item.url)) {
+                results.push(item);
+              }
+            });
+          });
+        }
 
-      const script = document.createElement('script');
-      script.id = DDG_SCRIPT_ID;
-      const encoded = encodeURIComponent(query);
-      script.src = `https://api.duckduckgo.com/?q=${encoded}&format=json&no_html=1&skip_disambig=1&callback=${cbName}`;
-      script.onerror = () => { cleanup(); reject(new Error('network error')); };
-      document.head.appendChild(script);
+        resolve({
+          localResults: results.slice(0, 10),
+          query: query
+        });
+      }, 100);
     });
   }
 
-  function renderResults(query, ddg) {
+  function renderResults(query, searchData) {
     resultsLoading.style.display = 'none';
     resultsPage.querySelector('.results-body').style.display = 'flex';
 
     resultsList.innerHTML = '';
     resultsSidebar.innerHTML = '';
 
-    // ── Sidebar: instant answer / abstract ──────────────────────────────
-    if (ddg && (ddg.Abstract || ddg.Answer)) {
-      const card = document.createElement('div');
-      card.className = 'sidebar-card';
-
-      if (ddg.Heading) {
-        const h = document.createElement('h3');
-        h.textContent = ddg.Heading;
-        card.appendChild(h);
-      }
-      if (ddg.Answer) {
-        const p = document.createElement('p');
-        p.style.cssText = 'font-size:20px;font-weight:700;color:#e8eaed;margin-bottom:6px';
-        p.textContent = ddg.Answer;
-        card.appendChild(p);
-      }
-      if (ddg.Abstract) {
-        const p = document.createElement('p');
-        p.textContent = ddg.Abstract;
-        card.appendChild(p);
-      }
-      if (ddg.AbstractURL) {
-        const br = document.createElement('br');
-        const a = document.createElement('a');
-        a.href = '#';
-        a.textContent = 'Read more ›';
-        a.addEventListener('click', e => { e.preventDefault(); navigate(ddg.AbstractURL); });
-        card.append(br, a);
-      }
-      resultsSidebar.appendChild(card);
-    }
-
-    // ── Build result items ───────────────────────────────────────────────
-    const items = [];
-
-    // DuckDuckGo Results (if any)
-    if (ddg && ddg.Results && ddg.Results.length) {
-      ddg.Results.forEach(r => {
-        items.push({ title: r.Text, url: r.FirstURL, snippet: '' });
-      });
-    }
-
-    // DuckDuckGo Related Topics (skip sub-group headers)
-    if (ddg && ddg.RelatedTopics && ddg.RelatedTopics.length) {
-      ddg.RelatedTopics.forEach(r => {
-        if (r.FirstURL && r.Text) {
-          // Derive a friendly title from the URL path segment
-          let title = r.Text;
-          try {
-            const seg = new URL(r.FirstURL).pathname.split('/').filter(Boolean).pop();
-            if (seg) {
-              try {
-                title = decodeURIComponent(seg.replace(/_/g, ' '));
-              } catch {
-                title = seg.replace(/_/g, ' ');  // fall back if percent-encoding is malformed
-              }
-            }
-          } catch { /* invalid URL — keep original Text as title */ }
-          items.push({ title, url: r.FirstURL, snippet: r.Text });
-        }
-      });
-    }
-
-    // ── If we have few/no DDG items, add curated search-engine links ─────
-    const searchEngineLinks = buildSearchEngineLinks(query);
+    // ── Build result items from local search ─────────────────────────────
+    const items = searchData?.localResults || [];
 
     // Show info bar
     const infoBar = document.createElement('div');
     infoBar.className = 'results-info';
-    infoBar.textContent =
-      `About ${items.length + searchEngineLinks.length} results for "${query}"`;
+    infoBar.textContent = `${items.length} results from BloxdHub for "${query}"`;
     resultsList.appendChild(infoBar);
 
-    // Render DDG items
-    items.slice(0, 10).forEach(item => {
+    // Render local search results
+    items.forEach(item => {
       resultsList.appendChild(makeResultCard(item.title, item.url, item.snippet));
     });
 
-    // Render search engine links
-    searchEngineLinks.forEach(item => {
-      resultsList.appendChild(makeResultCard(item.title, item.url, item.snippet, true));
-    });
-
     // Error fallback
-    if (items.length === 0 && searchEngineLinks.length === 0) {
+    if (items.length === 0) {
       resultsError.style.display = 'block';
-      resultsError.textContent =
-        'No results found. Try a different search term.';
+      resultsError.textContent = 'No results found in our database. Try searching for: JavaScript, HTML, CSS, Python, Node.js, React, or Web Development.';
     }
 
     // Easter egg injection (runs after normal results render)
     injectSearchEasterEgg(query);
   }
 
-  /**
-   * Builds a list of "Search on Google / Bing / DuckDuckGo" result cards
-   * so users always have clickable links to real search engines.
-   */
-  function buildSearchEngineLinks(query) {
-    const enc = encodeURIComponent(query);
-    return [
-      {
-        title: `"${query}" – Google Search`,
-        url: `https://www.google.com/search?q=${enc}`,
-        snippet: `See all Google search results for "${query}". Click to open Google in a new tab.`,
-      },
-      {
-        title: `"${query}" – Bing Search`,
-        url: `https://www.bing.com/search?q=${enc}`,
-        snippet: `See all Bing search results for "${query}". Click to open Bing in a new tab.`,
-      },
-      {
-        title: `"${query}" – DuckDuckGo`,
-        url: `https://duckduckgo.com/?q=${enc}`,
-        snippet: `See all DuckDuckGo search results for "${query}". Privacy-first search engine.`,
-      },
-    ];
-  }
+
 
   function makeResultCard(title, url, snippet, isEngine = false) {
     const card = document.createElement('div');
