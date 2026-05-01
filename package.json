@@ -5,7 +5,7 @@
   "main": "browser.js",
   "scripts": {
     "dev": "http-server -p 8000 -c-1",
-    "build": "echo 'Build complete'"
+    "build": "powershell -Command \"& '.\\deploy-ssh.ps1'\""
   },
   "keywords": [],
   "author": "",

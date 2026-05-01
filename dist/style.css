@@ -716,14 +716,6 @@ html, body {
   line-height: 1;
 }
 
-/* ── reCAPTCHA ──────────────────────────────────────────────────────────── */
-.recaptcha-container {
-  display: flex;
-  justify-content: center;
-  margin-top: 12px;
-  opacity: 0.9;
-}
-
 /* ── DevTools Panel ─────────────────────────────────────────────────────── */
 .devtools-panel {
   position: fixed;

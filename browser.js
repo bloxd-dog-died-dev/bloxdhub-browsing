@@ -55,6 +55,78 @@
   const openExternalBtn = document.getElementById('open-external-btn');
   const goBackBlockedBtn= document.getElementById('go-back-blocked-btn');
 
+  /* ── Configuration (load from .env or window.config) ────────────────── */
+  let config = {
+    recaptchaSiteKey: '',
+    recaptchaEnabled: false,
+  };
+
+  // Try to load config from .env file or window object
+  function loadConfig() {
+    // Check if config is set on window object (from external config.js)
+    if (window.bloxdhubConfig) {
+      config = Object.assign(config, window.bloxdhubConfig);
+    }
+    
+    // Try to fetch .env file and parse it
+    fetch('.env')
+      .then(r => r.text())
+      .then(text => {
+        const lines = text.split('\n');
+        lines.forEach(line => {
+          if (line.startsWith('RECAPTCHA_SITE_KEY=')) {
+            const value = line.split('=')[1]?.trim();
+            if (value) {
+              config.recaptchaSiteKey = value;
+              config.recaptchaEnabled = true;
+              initializeRecaptcha();
+            }
+          }
+        });
+      })
+      .catch(() => {
+        // .env not accessible - use window.config if available
+        if (config.recaptchaSiteKey) {
+          config.recaptchaEnabled = true;
+          initializeRecaptcha();
+        }
+      });
+  }
+
+  // Initialize reCAPTCHA on the page
+  function initializeRecaptcha() {
+    if (!config.recaptchaEnabled || !config.recaptchaSiteKey) return;
+    
+    const container = document.getElementById('recaptcha-container');
+    if (container && window.grecaptcha) {
+      try {
+        window.grecaptcha.render(container, {
+          sitekey: config.recaptchaSiteKey,
+          theme: 'light',
+          callback: onRecaptchaSuccess,
+          'expired-callback': onRecaptchaExpired,
+        });
+      } catch (e) {
+        console.log('reCAPTCHA render error (may not be configured yet):', e.message);
+      }
+    }
+  }
+
+  // reCAPTCHA callbacks
+  let recaptchaToken = '';
+  function onRecaptchaSuccess(token) {
+    recaptchaToken = token;
+  }
+  function onRecaptchaExpired() {
+    recaptchaToken = '';
+  }
+
+  // Check reCAPTCHA before search
+  function isRecaptchaValid() {
+    if (!config.recaptchaEnabled) return true;  // Not enabled, allow search
+    return recaptchaToken !== '';  // Must have a valid token
+  }
+
   /* ── Tab model ──────────────────────────────────────────────────────── */
   function createTab(url = '') {
     const id = ++tabCounter;
@@ -199,7 +271,22 @@
       showView('frame');
       frameBlocked.style.display = 'none';
       safeSetFrameSrc(url);
+      // Try to detect blocked frames with immediate and delayed checks
       scheduleBlockedCheck();
+      // Also set a faster timeout to show search results faster
+      setTimeout(() => {
+        const activeTab = getActiveTab();
+        if (activeTab && activeTab.view === 'frame' && frameBlocked.style.display !== 'flex') {
+          try {
+            // Check if frame failed to load
+            if (!browserFrame.contentDocument && !browserFrame.contentWindow) {
+              handleFrameBlocked();
+            }
+          } catch {
+            handleFrameBlocked();
+          }
+        }
+      }, 3000);
     }
     updateNavButtons(tab);
     setStatus('');
@@ -354,6 +441,14 @@
   /* ── Search: DuckDuckGo Instant Answers + curated results ──────────── */
   function runSearch(query) {
     if (!query.trim()) return;
+
+    // Check reCAPTCHA if enabled
+    if (!isRecaptchaValid()) {
+      resultsError.style.display = 'block';
+      resultsError.textContent = 'Please complete the reCAPTCHA before searching.';
+      setStatus('reCAPTCHA verification required');
+      return;
+    }
 
     // Show loading — clear previous results safely
     while (resultsList.firstChild) resultsList.removeChild(resultsList.firstChild);
@@ -574,42 +669,58 @@
     const tab = getActiveTab();
     if (!tab || tab.view !== 'frame') return;
 
-    // Try to read the iframe title/src (may be blocked by same-origin policy)
     try {
       const iUrl = browserFrame.contentWindow.location.href;
+      const iTitle = browserFrame.contentDocument.title;
+      
+      // Check if the iframe is showing an error page (contains "refused", "not found", "error", etc.)
+      const iContent = browserFrame.contentDocument.body?.innerText || '';
+      if (iContent.toLowerCase().includes('refused') || 
+          iContent.toLowerCase().includes('not found') ||
+          iContent.toLowerCase().includes('error') ||
+          iContent.toLowerCase().includes('unable to')) {
+        // This is an error page - show search results instead
+        handleFrameBlocked();
+        return;
+      }
+      
+      // Normal page loaded successfully
       if (iUrl && iUrl !== 'about:blank') {
         tab.url = iUrl;
         addressBar.value = iUrl;
         updateLock(iUrl);
       }
-      const iTitle = browserFrame.contentDocument.title;
       if (iTitle) {
         tab.title = iTitle;
         updateTabTitle(tab);
       }
-    } catch { /* cross-origin, ignore */ }
+    } catch { 
+      // Cross-origin blocked - show search results
+      handleFrameBlocked();
+      return;
+    }
 
     frameBlocked.style.display = 'none';
     setStatus('');
   });
 
-  // Detect blocked iframes by listening for errors (best-effort)
+  // Detect blocked/failed iframes by listening for errors and calling handler
   browserFrame.addEventListener('error', () => {
-    frameBlocked.style.display = 'flex';
-    setStatus('');
+    handleFrameBlocked();
   });
 
   // After a small delay, check if the iframe content loaded (detect X-Frame-Options blocking)
   function scheduleBlockedCheck() {
     setTimeout(() => {
-      if (getActiveTab()?.view !== 'frame') return;
+      const tab = getActiveTab();
+      if (!tab || tab.view !== 'frame') return;
+      
       try {
-        // Intentionally access contentDocument to trigger a DOMException
-        // for cross-origin frames — same-origin frames allow this without error.
-        // eslint-disable-next-line no-unused-expressions
+        // Try to detect if frame is blocked by attempting to access contentDocument
         browserFrame.contentDocument?.title;
       } catch {
-        frameBlocked.style.display = 'flex';
+        // Cross-origin or blocked - show search results instead
+        handleFrameBlocked();
       }
     }, IFRAME_CHECK_DELAY_MS);
   }
@@ -985,35 +1096,43 @@
     }
   };
 
-  /* ── Improved Frame Blocking Detection ─────────────────────────────── */
-  function scheduleBlockedCheck() {
-    setTimeout(() => {
-      try {
-        if (!browserFrame.contentDocument && !browserFrame.contentWindow) {
-          handleFrameBlocked();
-        }
-      } catch {
-        handleFrameBlocked();
-      }
-    }, IFRAME_CHECK_DELAY_MS);
-  }
-
   function handleFrameBlocked() {
     const tab = getActiveTab();
     if (!tab || tab.view !== 'frame') return;
     
-    frameBlocked.style.display = 'flex';
-    
-    // Fallback: show search results for the site
-    const urlObj = new URL(tab.url);
-    const domain = urlObj.hostname;
-    const searchQuery = `${domain} site:${domain}`;
-    
-    // Show option to search for the site instead
-    openExternalBtn.textContent = `Search on Google for "${domain}" ✓`;
-    openExternalBtn.onclick = () => {
-      navigate(`${SEARCH_BASE}${encodeURIComponent(domain)}`);
-    };
+    // Automatically show search results for the domain instead of blocking
+    try {
+      let domain = '';
+      try {
+        const urlObj = new URL(tab.url);
+        domain = urlObj.hostname;
+      } catch {
+        // If URL parsing fails, extract domain from string
+        domain = tab.url.replace(/^https?:\/\//, '').split('/')[0];
+      }
+      
+      if (!domain) domain = tab.url;
+      
+      // Show results page instead of blocked message
+      tab.view = 'results';
+      tab.title = `Search: ${domain}`;
+      tab.favicon = '🔍';
+      updateTabTitle(tab);
+      showView('results');
+      
+      // Search for the domain
+      resultsSearch.value = domain;
+      frameBlocked.style.display = 'none';
+      runSearch(domain);
+    } catch (e) {
+      // If everything fails, show generic blocked message
+      frameBlocked.style.display = 'flex';
+      openExternalBtn.textContent = `Try opening in new tab`;
+      openExternalBtn.onclick = () => {
+        const t = getActiveTab();
+        if (t?.url) safeWindowOpen(t.url);
+      };
+    }
   }
 
   /* ── Keyboard shortcuts ────────────────────────────────────────────── */
@@ -1027,4 +1146,5 @@
   /* ── Bootstrap: open a first tab ─────────────────────────────────────── */
   createTab();
   devtools.init();
+  loadConfig();  // Load reCAPTCHA configuration from .env
 })();

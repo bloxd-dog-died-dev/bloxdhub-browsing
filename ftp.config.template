@@ -1,0 +1,43 @@
+# BloxdHub FTP Deployment Configuration
+# Update these values with your FTP server details
+
+# FTP Server Host (e.g., ftp.example.com)
+FTP_HOST=ftp.example.com
+
+# FTP Username
+FTP_USER=username
+
+# FTP Password (BE CAREFUL - do not commit to public repos!)
+FTP_PASSWORD=your_password_here
+
+# FTP Path on server (where to upload files)
+FTP_PATH=/public_html/downloads/
+
+# Optional: Remote backup path
+BACKUP_PATH=/backups/bloxdhub/
+
+# Upload Settings
+USE_BINARY=true
+PASSIVE_MODE=true
+
+# Deployment Settings
+# Set to true to create backups before uploading
+CREATE_BACKUP=true
+
+# Notification Settings
+# Email to notify after successful deployment (optional)
+NOTIFY_EMAIL=
+
+# Custom domain/URL where files will be available
+DOWNLOAD_URL=https://example.com/downloads/BloxdHub.exe
+
+# ===== USAGE =====
+# 1. Update this file with your FTP credentials
+# 2. Run: ./deploy-ftp.ps1 -FtpHost $env:FTP_HOST -FtpUser $env:FTP_USER -FtpPassword $env:FTP_PASSWORD -FtpPath $env:FTP_PATH
+# 3. Users can download from: $env:DOWNLOAD_URL
+
+# For security:
+# - Use environment variables instead of storing credentials here
+# - Use an FTP user with restricted permissions
+# - Use SFTP (SSH) instead of FTP if possible
+# - Store this file outside the repository

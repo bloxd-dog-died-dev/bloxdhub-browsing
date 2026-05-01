@@ -1,0 +1,46 @@
+# Credentials and Environment Variables
+.env
+.env.local
+.env.*.local
+.env.*.example
+*.env
+ftp.config.ps1
+credentials.ps1
+
+# Build Output
+/CSharpApp/obj/
+/CSharpApp/bin/
+/CSharpApp/standalone/
+*.exe
+*.dll
+*.pdb
+
+# Node modules
+node_modules/
+package-lock.json
+
+# IDE
+.vscode/
+.vs/
+*.sln.user
+*.suo
+*.csproj.user
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Backup Files
+*.backup
+*.backup_*
+*.bak
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Distribution temp files
+dist/old/
+*.zip.tmp
