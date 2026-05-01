@@ -1,5 +1,22 @@
 # BloxdHub Browser
 
+A modern, lightweight web browser simulation with search integration, built with vanilla HTML, CSS, and JavaScript. Now available as a standalone Windows desktop application!
+
+## Quick Start - Windows Executable
+
+Want to run BloxdHub as a standalone desktop app? 
+
+```powershell
+cd .\CSharpApp
+.\build.ps1
+```
+
+This will create a standalone `BloxdHub.exe` file that you can share and run without any dependencies.
+
+See [CSharpApp/README.md](CSharpApp/README.md) for detailed instructions.
+
+## BloxdHub Browser
+
 A web-based browser application styled like Google Chrome / Microsoft Edge.
 
 ![BloxdHub Browser – New Tab Page](https://github.com/user-attachments/assets/bae3c811-2ca4-44db-b929-c362cb711293)

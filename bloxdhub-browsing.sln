@@ -1,0 +1,29 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CSharpApp", "CSharpApp", "{A4F8AD63-B77F-498A-168F-8BC9E635819C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BloxdHubBrowser", "CSharpApp\BloxdHubBrowser.csproj", "{F1BF1726-8D93-56EB-E59B-54EFA6DD711D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F1BF1726-8D93-56EB-E59B-54EFA6DD711D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1BF1726-8D93-56EB-E59B-54EFA6DD711D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1BF1726-8D93-56EB-E59B-54EFA6DD711D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1BF1726-8D93-56EB-E59B-54EFA6DD711D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F1BF1726-8D93-56EB-E59B-54EFA6DD711D} = {A4F8AD63-B77F-498A-168F-8BC9E635819C}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {66894205-7B4F-4F37-838E-A31B13E88EC2}
+	EndGlobalSection
+EndGlobal

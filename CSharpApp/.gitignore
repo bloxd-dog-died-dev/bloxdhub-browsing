@@ -1,0 +1,26 @@
+# Ignore build outputs
+bin/
+obj/
+publish/
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln.docstates
+*.log
+
+# Ignore package files
+packages/
+.nuget/
+
+# Ignore IDE files
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Ignore executables
+*.exe
+*.dll
+*.pdb
