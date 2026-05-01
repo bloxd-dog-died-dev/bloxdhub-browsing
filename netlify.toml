@@ -1,7 +1,5 @@
+# Netlify configuration for BloxdHub Browser (static site)
 [build]
+  # Static site - all files in root directory
   publish = "."
-  # No build command needed - static site
-
-[dev]
-  command = "npm run dev"
-  port = 8000
+  # No build command - site is already built
