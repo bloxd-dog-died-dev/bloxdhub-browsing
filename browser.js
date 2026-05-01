@@ -6,8 +6,7 @@
  * • Multi-tab management
  * • Back / Forward / Reload / Home navigation
  * • Address bar: detects URLs vs search queries
- * • Search results page: uses DuckDuckGo Instant Answers API (JSONP, no CORS)
- *   and supplements with curated web results for common queries
+ * • Search results page: uses custom local knowledge base (no external APIs)
  * • Iframe navigation for actual URLs (falls back to "open in new tab" if blocked)
  * • Keyboard shortcuts (Ctrl+T, Ctrl+W, Ctrl+R, Ctrl+L, Enter)
  */
@@ -16,9 +15,8 @@
   'use strict';
 
   /* ── Constants ──────────────────────────────────────────────────────── */
-  const DDG_TIMEOUT_MS        = 8000;   // DuckDuckGo API request timeout
+  const SEARCH_TIMEOUT_MS     = 1000;   // Local search timeout
   const IFRAME_CHECK_DELAY_MS = 5000;   // Delay before checking for blocked iframe
-  const DDG_SCRIPT_ID         = '_ddg_script';  // ID for the JSONP script element
 
   /* ── State ──────────────────────────────────────────────────────────── */
   let tabs = [];
@@ -127,14 +125,60 @@
     return recaptchaToken !== '';  // Must have a valid token
   }
 
+  // ── Local Knowledge Base ────────────────────────────────────────────
+  const KNOWLEDGE_BASE = {
+    'javascript': [
+      { title: 'JavaScript - MDN Web Docs', url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript', snippet: 'Complete JavaScript guide with examples and best practices.' },
+      { title: 'JavaScript Tutorial', url: 'https://www.w3schools.com/js/', snippet: 'Learn JavaScript from basics to advanced concepts.' },
+      { title: 'JavaScript ES6 Features', url: 'https://www.javascript.com/', snippet: 'Modern JavaScript features and syntax.' }
+    ],
+    'bloxdhub': [
+      { title: 'BloxdHub Browser - About', url: 'https://bloxdhub.com', snippet: 'BloxdHub Browser - A modern web browser simulation.' },
+      { title: 'Features', url: 'about:features', snippet: 'Fast, lightweight, and feature-rich browser with built-in search.' }
+    ],
+    'html': [
+      { title: 'HTML - MDN Web Docs', url: 'https://developer.mozilla.org/en-US/docs/Web/HTML', snippet: 'Complete HTML reference guide for web development.' },
+      { title: 'HTML Tutorial', url: 'https://www.w3schools.com/html/', snippet: 'Learn HTML elements, attributes, and structure.' }
+    ],
+    'css': [
+      { title: 'CSS - MDN Web Docs', url: 'https://developer.mozilla.org/en-US/docs/Web/CSS', snippet: 'Learn CSS styling, layouts, and responsive design.' },
+      { title: 'CSS Tutorial', url: 'https://www.w3schools.com/css/', snippet: 'Master CSS selectors, properties, and techniques.' }
+    ],
+    'python': [
+      { title: 'Python Official Documentation', url: 'https://docs.python.org/', snippet: 'Official Python language documentation and references.' },
+      { title: 'Python Tutorial', url: 'https://www.w3schools.com/python/', snippet: 'Learn Python programming from beginner to advanced.' },
+      { title: 'Python - Tutorials Point', url: 'https://www.tutorialspoint.com/python/', snippet: 'Comprehensive Python tutorials and examples.' }
+    ],
+    'nodejs': [
+      { title: 'Node.js Documentation', url: 'https://nodejs.org/docs/', snippet: 'Official Node.js documentation and API reference.' },
+      { title: 'Node.js Tutorial', url: 'https://www.w3schools.com/nodejs/', snippet: 'Learn Node.js server-side JavaScript development.' }
+    ],
+    'react': [
+      { title: 'React Official Documentation', url: 'https://react.dev', snippet: 'Learn React component-based UI development.' },
+      { title: 'React Tutorial', url: 'https://www.w3schools.com/react/', snippet: 'React basics, hooks, and state management.' }
+    ],
+    'typescript': [
+      { title: 'TypeScript Handbook', url: 'https://www.typescriptlang.org/docs/', snippet: 'Official TypeScript documentation.' },
+      { title: 'TypeScript Tutorial', url: 'https://www.w3schools.com/typescript/', snippet: 'Learn TypeScript step by step.' }
+    ],
+    'bloxdhub': [
+      { title: 'BloxdHub Browser - About', url: 'https://github.com/bloxd-dog-died-dev/bloxdhub-browsing', snippet: 'BloxdHub Browser - A modern web browser simulation.' },
+      { title: 'Features', url: 'about:features', snippet: 'Fast, lightweight, and feature-rich browser with built-in search.' }
+    ],
+    'web development': [
+      { title: 'Web Development - MDN', url: 'https://developer.mozilla.org/', snippet: 'Complete web development resources and guides.' },
+      { title: 'Web Development Roadmap', url: 'https://roadmap.sh/web', snippet: 'Learn the skills and tools needed for web development.' }
+    ]
+  };
+
   /* ── Tab model ──────────────────────────────────────────────────────── */
   function createTab(url = '') {
     const id = ++tabCounter;
     const tab = {
       id,
       url: url || '',
-      title: url ? 'mammicon' : 'New Tab',
-      favicon: 'mammicon',
+      title: url ? 'Loading…' : 'New Tab',
+      favicon: '🌐',
       history: url ? [url] : [],
       historyIndex: url ? 0 : -1,
       view: url ? (isSearchQuery(url) ? 'results' : 'frame') : 'newtab',
@@ -329,7 +373,7 @@
     tab.url = '';
     tab.view = 'newtab';
     tab.title = 'New Tab';
-    tab.favicon = 'lel';
+    tab.favicon = '🌐';
     addressBar.value = '';
     updateTabTitle(tab);
     updateNavButtons(tab);
@@ -422,8 +466,8 @@
       lockIcon.textContent = '🔒';
       lockIcon.title = 'Secure connection';
     } else {
-      lockIcon.textContent = '–';  // en dash as "no lock" symbol
-      lockIcon.title = 'secure?';
+      lockIcon.textContent = '⚠️';
+      lockIcon.title = 'Not secure';
     }
   }
 
@@ -438,7 +482,7 @@
     statusBar.textContent = msg;
   }
 
-  /* ── Search: DuckDuckGo Instant Answers + curated results ──────────── */
+  /* ── Search: Local Knowledge Base ──────────────────────────────── */
   function runSearch(query) {
     if (!query.trim()) return;
 

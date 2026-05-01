@@ -1,6 +1,6 @@
 {
   "name": "bloxdhub-browsing",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "BloxDHub Browsing Project",
   "main": "browser.js",
   "scripts": {
