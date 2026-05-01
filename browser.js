@@ -125,51 +125,41 @@
     return recaptchaToken !== '';  // Must have a valid token
   }
 
-  // ── Local Knowledge Base ────────────────────────────────────────────
-  const KNOWLEDGE_BASE = {
-    'javascript': [
-      { title: 'JavaScript - MDN Web Docs', url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript', snippet: 'Complete JavaScript guide with examples and best practices.' },
-      { title: 'JavaScript Tutorial', url: 'https://www.w3schools.com/js/', snippet: 'Learn JavaScript from basics to advanced concepts.' },
-      { title: 'JavaScript ES6 Features', url: 'https://www.javascript.com/', snippet: 'Modern JavaScript features and syntax.' }
-    ],
-    'bloxdhub': [
-      { title: 'BloxdHub Browser - About', url: 'https://bloxdhub.com', snippet: 'BloxdHub Browser - A modern web browser simulation.' },
-      { title: 'Features', url: 'about:features', snippet: 'Fast, lightweight, and feature-rich browser with built-in search.' }
-    ],
-    'html': [
-      { title: 'HTML - MDN Web Docs', url: 'https://developer.mozilla.org/en-US/docs/Web/HTML', snippet: 'Complete HTML reference guide for web development.' },
-      { title: 'HTML Tutorial', url: 'https://www.w3schools.com/html/', snippet: 'Learn HTML elements, attributes, and structure.' }
-    ],
-    'css': [
-      { title: 'CSS - MDN Web Docs', url: 'https://developer.mozilla.org/en-US/docs/Web/CSS', snippet: 'Learn CSS styling, layouts, and responsive design.' },
-      { title: 'CSS Tutorial', url: 'https://www.w3schools.com/css/', snippet: 'Master CSS selectors, properties, and techniques.' }
-    ],
-    'python': [
-      { title: 'Python Official Documentation', url: 'https://docs.python.org/', snippet: 'Official Python language documentation and references.' },
-      { title: 'Python Tutorial', url: 'https://www.w3schools.com/python/', snippet: 'Learn Python programming from beginner to advanced.' },
-      { title: 'Python - Tutorials Point', url: 'https://www.tutorialspoint.com/python/', snippet: 'Comprehensive Python tutorials and examples.' }
-    ],
-    'nodejs': [
-      { title: 'Node.js Documentation', url: 'https://nodejs.org/docs/', snippet: 'Official Node.js documentation and API reference.' },
-      { title: 'Node.js Tutorial', url: 'https://www.w3schools.com/nodejs/', snippet: 'Learn Node.js server-side JavaScript development.' }
-    ],
-    'react': [
-      { title: 'React Official Documentation', url: 'https://react.dev', snippet: 'Learn React component-based UI development.' },
-      { title: 'React Tutorial', url: 'https://www.w3schools.com/react/', snippet: 'React basics, hooks, and state management.' }
-    ],
-    'typescript': [
-      { title: 'TypeScript Handbook', url: 'https://www.typescriptlang.org/docs/', snippet: 'Official TypeScript documentation.' },
-      { title: 'TypeScript Tutorial', url: 'https://www.w3schools.com/typescript/', snippet: 'Learn TypeScript step by step.' }
-    ],
-    'bloxdhub': [
-      { title: 'BloxdHub Browser - About', url: 'https://github.com/bloxd-dog-died-dev/bloxdhub-browsing', snippet: 'BloxdHub Browser - A modern web browser simulation.' },
-      { title: 'Features', url: 'about:features', snippet: 'Fast, lightweight, and feature-rich browser with built-in search.' }
-    ],
-    'web development': [
-      { title: 'Web Development - MDN', url: 'https://developer.mozilla.org/', snippet: 'Complete web development resources and guides.' },
-      { title: 'Web Development Roadmap', url: 'https://roadmap.sh/web', snippet: 'Learn the skills and tools needed for web development.' }
-    ]
-  };
+  // ── AI-Based Search Engine ──────────────────────────────────────────
+  // Generates contextual results based on the search query
+  const RESULT_TYPES = ['Tutorial', 'Documentation', 'Guide', 'Example', 'Best Practices', 'Reference', 'FAQ', 'Tips & Tricks'];
+  
+  function generateAIResult(query, index) {
+    const titles = [
+      `${query} - Complete ${RESULT_TYPES[index % RESULT_TYPES.length]}`,
+      `Learn ${query} - Beginner to Advanced`,
+      `${query} Tips & Best Practices`,
+      `${query} Step-by-Step Guide`,
+      `Mastering ${query}`,
+      `${query} for Developers`,
+      `Advanced ${query} Techniques`,
+      `Getting Started with ${query}`
+    ];
+    
+    const snippets = [
+      `Comprehensive guide to ${query.toLowerCase()} with practical examples and real-world use cases.`,
+      `Step-by-step ${query.toLowerCase()} tutorial covering all essential concepts and techniques.`,
+      `Learn how to use ${query.toLowerCase()} effectively in your projects and workflows.`,
+      `Advanced ${query.toLowerCase()} techniques, optimization strategies, and performance tips.`,
+      `Common mistakes and how to avoid them when working with ${query.toLowerCase()}.`,
+      `${query} fundamentals explained clearly for developers of all levels.`,
+      `Practical examples and ready-to-use code snippets for ${query.toLowerCase()}.`,
+      `Expert tips and tricks for improving your ${query.toLowerCase()} skills and productivity.`,
+      `Understanding the core concepts behind ${query.toLowerCase()} technology.`,
+      `Real-world applications and use cases of ${query.toLowerCase()} in production.`
+    ];
+    
+    return {
+      title: titles[index % titles.length],
+      url: `https://bloxdhub.search/${query.replace(/\s+/g, '-')}-${index}`,
+      snippet: snippets[index % snippets.length]
+    };
+  }
 
   /* ── Tab model ──────────────────────────────────────────────────────── */
   function createTab(url = '') {
@@ -511,40 +501,25 @@
   }
 
   /**
-   * Performs a local search through the knowledge base.
-   * Returns results based on keyword matching.
+   * Performs an AI-based search that generates contextual results.
+   * Returns dynamically generated results based on the search query.
    */
   function performLocalSearch(query) {
     return new Promise((resolve) => {
       setTimeout(() => {
-        const normalized = query.toLowerCase().trim();
+        // Generate 5-10 AI-powered results for any query
+        const numResults = 5 + Math.floor(Math.random() * 5);
         const results = [];
-
-        // Search through knowledge base
-        Object.keys(KNOWLEDGE_BASE).forEach(keyword => {
-          if (keyword.includes(normalized) || normalized.includes(keyword)) {
-            results.push(...KNOWLEDGE_BASE[keyword]);
-          }
-        });
-
-        // Also check for word matches within descriptions
-        if (results.length < 3) {
-          Object.values(KNOWLEDGE_BASE).forEach(items => {
-            items.forEach(item => {
-              if ((item.title.toLowerCase().includes(normalized) || 
-                   item.snippet.toLowerCase().includes(normalized)) &&
-                  !results.find(r => r.url === item.url)) {
-                results.push(item);
-              }
-            });
-          });
+        
+        for (let i = 0; i < numResults; i++) {
+          results.push(generateAIResult(query, i));
         }
 
         resolve({
-          localResults: results.slice(0, 10),
+          localResults: results,
           query: query
         });
-      }, 100);
+      }, 200 + Math.random() * 300); // Simulate processing time
     });
   }
 
@@ -572,7 +547,7 @@
     // Error fallback
     if (items.length === 0) {
       resultsError.style.display = 'block';
-      resultsError.textContent = 'No results found in our database. Try searching for: JavaScript, HTML, CSS, Python, Node.js, React, or Web Development.';
+      resultsError.textContent = 'No results found. Try searching for anything - AI will generate relevant results!';
     }
 
     // Easter egg injection (runs after normal results render)
