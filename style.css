@@ -540,6 +540,92 @@ html, body {
   white-space: nowrap;
 }
 
+/* ── Easter Eggs ────────────────────────────────────────────────────────── */
+
+/* Barrel Roll */
+@keyframes barrel-roll {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.barrel-rolling {
+  animation: barrel-roll 1s ease-in-out;
+  transform-origin: center center;
+}
+
+/* Rainbow hue-rotate on whole browser window */
+@keyframes hue-spin {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(360deg); }
+}
+.rainbow-hue {
+  animation: hue-spin 3s linear infinite;
+  will-change: filter;
+}
+
+/* Toast notification */
+.egg-toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  background: rgba(30, 30, 50, 0.95);
+  color: #e8eaed;
+  border: 1px solid var(--accent);
+  border-radius: 24px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 9999;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.5s ease, transform 0.4s ease;
+}
+.egg-toast.hiding {
+  opacity: 0;
+  transform: translateX(-50%) translateY(12px);
+}
+
+/* Confetti piece */
+.egg-confetti {
+  position: fixed;
+  top: -20px;
+  pointer-events: none;
+  z-index: 9998;
+  border-radius: 2px;
+  will-change: transform, opacity;
+}
+
+/* Rainbow mode shimmer on logo */
+.rainbow-logo {
+  background: linear-gradient(90deg,
+    #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #c77dff, #ff6b6b);
+  background-size: 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: rainbow-shift 2s linear infinite;
+}
+@keyframes rainbow-shift {
+  from { background-position: 0% center; }
+  to   { background-position: 200% center; }
+}
+
+/* Easter egg highlight result card */
+.result-item.egg-highlight {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, rgba(138,180,248,0.08) 0%, rgba(100,65,165,0.08) 100%);
+}
+.egg-answer {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--accent);
+  text-align: center;
+  padding: 16px 0 8px;
+  line-height: 1;
+}
+
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .results-sidebar { display: none; }
