@@ -1,5 +1,7 @@
-python3 - <<'PY'
-import toml, sys
-toml.load("netlify.toml")
-print("netlify.toml parses OK")
-PY
+[build]
+  publish = "."
+  # No build command needed - static site
+
+[dev]
+  command = "npm run dev"
+  port = 8000
