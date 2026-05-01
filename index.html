@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BloxdHub Browser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="browser-window">
+
+    <!-- ── Tab Bar ─────────────────────────────────────────────── -->
+    <div class="tab-bar" id="tab-bar">
+      <div class="tabs" id="tabs-container"></div>
+      <button class="new-tab-btn" id="new-tab-btn" title="New tab">+</button>
+      <!-- window controls (cosmetic) -->
+      <div class="window-controls">
+        <span class="wc minimize"></span>
+        <span class="wc maximize"></span>
+        <span class="wc close"></span>
+      </div>
+    </div>
+
+    <!-- ── Navigation Bar ───────────────────────────────────────── -->
+    <div class="nav-bar">
+      <div class="nav-btn-group">
+        <button class="nav-btn" id="back-btn" title="Back" disabled>&#8249;</button>
+        <button class="nav-btn" id="forward-btn" title="Forward" disabled>&#8250;</button>
+        <button class="nav-btn" id="reload-btn" title="Reload">&#8635;</button>
+        <button class="nav-btn" id="home-btn" title="Home">&#8962;</button>
+      </div>
+      <div class="address-bar-wrap">
+        <span class="lock-icon" id="lock-icon">&#128274;</span>
+        <input
+          type="text"
+          id="address-bar"
+          class="address-bar"
+          placeholder="Search or enter URL"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="go-btn" id="go-btn" title="Go">&#10132;</button>
+      </div>
+      <div class="nav-extras">
+        <button class="nav-btn" title="Bookmarks">&#9733;</button>
+        <button class="nav-btn" title="Settings">&#8942;</button>
+      </div>
+    </div>
+
+    <!-- ── Content Area ─────────────────────────────────────────── -->
+    <div class="content-area" id="content-area">
+
+      <!-- New-tab page (shown when no URL is loaded) -->
+      <div class="new-tab-page" id="new-tab-page">
+        <div class="ntb-body">
+          <div class="ntb-logo">
+            <span class="logo-b">B</span>loxdHub
+          </div>
+          <p class="ntb-tagline">Your personal browser</p>
+
+          <div class="ntb-search-box">
+            <span class="ntb-search-icon">&#128269;</span>
+            <input
+              type="text"
+              id="ntb-search"
+              placeholder="Search the web or enter a URL"
+              autocomplete="off"
+            />
+            <button id="ntb-search-btn">Search</button>
+          </div>
+
+          <div class="quick-links">
+            <a class="ql-item" data-url="https://www.google.com">
+              <div class="ql-icon google-icon">G</div>
+              <span>Google</span>
+            </a>
+            <a class="ql-item" data-url="https://www.youtube.com">
+              <div class="ql-icon youtube-icon">▶</div>
+              <span>YouTube</span>
+            </a>
+            <a class="ql-item" data-url="https://www.wikipedia.org">
+              <div class="ql-icon wiki-icon">W</div>
+              <span>Wikipedia</span>
+            </a>
+            <a class="ql-item" data-url="https://www.reddit.com">
+              <div class="ql-icon reddit-icon">r/</div>
+              <span>Reddit</span>
+            </a>
+            <a class="ql-item" data-url="https://www.github.com">
+              <div class="ql-icon github-icon">&#9654;</div>
+              <span>GitHub</span>
+            </a>
+            <a class="ql-item" data-url="https://www.twitch.tv">
+              <div class="ql-icon twitch-icon">&#9670;</div>
+              <span>Twitch</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search results page (shown after a search) -->
+      <div class="results-page" id="results-page" style="display:none;">
+        <div class="results-header">
+          <div class="results-logo">
+            <span class="logo-b">B</span>loxdHub
+          </div>
+          <div class="results-search-bar-wrap">
+            <input type="text" id="results-search" class="results-search" autocomplete="off" />
+            <button id="results-search-btn">&#128269;</button>
+          </div>
+          <div class="results-tabs-nav">
+            <button class="rtab active">All</button>
+            <button class="rtab">Images</button>
+            <button class="rtab">Videos</button>
+            <button class="rtab">News</button>
+          </div>
+        </div>
+        <div class="results-body">
+          <div id="results-list" class="results-list"></div>
+          <div id="results-sidebar" class="results-sidebar"></div>
+        </div>
+        <div id="results-loading" class="results-loading" style="display:none;">
+          <div class="spinner"></div>
+          <p>Searching…</p>
+        </div>
+        <div id="results-error" class="results-error" style="display:none;"></div>
+      </div>
+
+      <!-- Iframe for navigating to actual pages -->
+      <div class="frame-wrap" id="frame-wrap" style="display:none;">
+        <iframe
+          id="browser-frame"
+          title="browser content"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+        ></iframe>
+        <!-- Shown when the site blocks iframe embedding -->
+        <div class="frame-blocked" id="frame-blocked" style="display:none;">
+          <div class="blocked-icon">&#128683;</div>
+          <h2>Can't display this page here</h2>
+          <p>
+            This page may have restrictions that prevent it from loading inside
+            the browser. You can open it in a full browser tab instead.
+          </p>
+          <div class="blocked-actions">
+            <button id="open-external-btn" class="btn-primary">Open in new tab &#8599;</button>
+            <button id="go-back-blocked-btn" class="btn-secondary">Go back</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content-area -->
+
+    <!-- ── Status Bar ────────────────────────────────────────────── -->
+    <div class="status-bar" id="status-bar"></div>
+
+  </div><!-- /browser-window -->
+
+  <script src="browser.js"></script>
+</body>
+</html>
