@@ -279,6 +279,8 @@
       }
     } catch { /* invalid URL — do nothing */ }
   }
+
+  /**
    * The URL is parsed and normalized via the URL constructor so that only
    * the sanitized href (not raw user input) is ever assigned to the frame src.
    * Any other scheme (javascript:, data:, etc.) falls back to about:blank.
@@ -493,6 +495,9 @@
       resultsError.textContent =
         'No results found. Try a different search term.';
     }
+
+    // Easter egg injection (runs after normal results render)
+    injectSearchEasterEgg(query);
   }
 
   /**
@@ -674,6 +679,201 @@
     el.addEventListener('mouseenter', () => setStatus(el.dataset.url || ''));
     el.addEventListener('mouseleave', () => setStatus(''));
   });
+
+  /* ── Easter Eggs ────────────────────────────────────────────────────────── */
+
+  // ── Toast utility ────────────────────────────────────────────────────────
+  function showToast(msg) {
+    const existing = document.querySelector('.egg-toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.className = 'egg-toast';
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add('hiding');
+      setTimeout(() => toast.remove(), 500);
+    }, 3200);
+  }
+
+  // ── Confetti burst ───────────────────────────────────────────────────────
+  function launchConfetti() {
+    const COLORS = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#c77dff','#ff9a3c'];
+    for (let i = 0; i < 80; i++) {
+      const el = document.createElement('div');
+      el.className = 'egg-confetti';
+      const size = 6 + Math.random() * 8;
+      const startX = Math.random() * window.innerWidth;
+      const dur = 1500 + Math.random() * 1000;
+      el.style.cssText = [
+        `left:${startX}px`,
+        `width:${size}px`,
+        `height:${size}px`,
+        `background:${COLORS[Math.floor(Math.random() * COLORS.length)]}`,
+        `border-radius:${Math.random() > 0.5 ? '50%' : '2px'}`,
+        `transform:translateY(0) rotate(0deg)`,
+        `opacity:1`,
+        `transition:transform ${dur}ms ease-in, opacity ${dur}ms ease-in`,
+      ].join(';');
+      document.body.appendChild(el);
+      requestAnimationFrame(() => {
+        const dy = window.innerHeight + 40;
+        const rot = 360 + Math.random() * 720;
+        el.style.transform = `translateY(${dy}px) rotate(${rot}deg)`;
+        el.style.opacity = '0';
+      });
+      setTimeout(() => el.remove(), dur + 100);
+    }
+    showToast('🎮 Konami Code activated! You found a secret!');
+  }
+
+  // ── Konami Code: ↑↑↓↓←→←→BA ─────────────────────────────────────────────
+  (function () {
+    const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown',
+                    'ArrowLeft','ArrowRight','ArrowLeft','ArrowRight',
+                    'b','a'];
+    let seq = [];
+    document.addEventListener('keydown', e => {
+      seq.push(e.key);
+      if (seq.length > KONAMI.length) seq.shift();
+      if (seq.join(',') === KONAMI.join(',')) {
+        seq = [];
+        launchConfetti();
+      }
+    });
+  })();
+
+  // ── Logo 5× click → rainbow mode ─────────────────────────────────────────
+  let rainbowActive = false;
+
+  function toggleRainbowMode() {
+    rainbowActive = !rainbowActive;
+    const bw = document.querySelector('.browser-window');
+    const logos = document.querySelectorAll('.ntb-logo, .results-logo');
+    if (rainbowActive) {
+      bw.classList.add('rainbow-hue');
+      logos.forEach(l => l.classList.add('rainbow-logo'));
+      showToast('🌈 Rainbow mode on! Click the logo 5× again to disable.');
+    } else {
+      bw.classList.remove('rainbow-hue');
+      logos.forEach(l => l.classList.remove('rainbow-logo'));
+      showToast('🌈 Rainbow mode off.');
+    }
+  }
+
+  (function () {
+    let clicks = 0;
+    let timer = null;
+    document.addEventListener('click', e => {
+      if (e.target.closest('.ntb-logo') || e.target.closest('.results-logo')) {
+        clicks++;
+        clearTimeout(timer);
+        timer = setTimeout(() => { clicks = 0; }, 1000);
+        if (clicks >= 5) {
+          clicks = 0;
+          toggleRainbowMode();
+        }
+      }
+    });
+  })();
+
+  // ── Barrel roll ───────────────────────────────────────────────────────────
+  function doBarrelRoll() {
+    const area = document.getElementById('content-area');
+    area.classList.remove('barrel-rolling');
+    void area.offsetWidth; // Force reflow to restart CSS animation
+    area.classList.add('barrel-rolling');
+    area.addEventListener('animationend', () => area.classList.remove('barrel-rolling'), { once: true });
+    showToast('🛸 Wheeeee!');
+  }
+
+  // ── Search easter eggs ────────────────────────────────────────────────────
+  function makeEggCard(bigText, title, snippet) {
+    const card = document.createElement('div');
+    card.className = 'result-item egg-highlight';
+
+    if (bigText) {
+      const ans = document.createElement('div');
+      ans.className = 'egg-answer';
+      ans.textContent = bigText;
+      card.appendChild(ans);
+    }
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'result-title';
+    titleEl.textContent = title;
+    card.appendChild(titleEl);
+
+    if (snippet) {
+      const snipEl = document.createElement('div');
+      snipEl.className = 'result-snippet';
+      snipEl.textContent = snippet;
+      card.appendChild(snipEl);
+    }
+    return card;
+  }
+
+  const WEEK_DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  const SEARCH_EGGS = {
+    'do a barrel roll': () => doBarrelRoll(),
+    'barrel roll':      () => doBarrelRoll(),
+    '42': () => {
+      resultsList.insertBefore(
+        makeEggCard('42', 'The Answer', 'The answer to life, the universe, and everything — as calculated by Deep Thought over 7.5 million years.'),
+        resultsList.firstChild
+      );
+    },
+    'the answer to life the universe and everything': () => {
+      resultsList.insertBefore(
+        makeEggCard('42', 'The Answer to Life, the Universe, and Everything',
+          'Calculated by the supercomputer Deep Thought over 7.5 million years. (The Hitchhiker\'s Guide to the Galaxy)'),
+        resultsList.firstChild
+      );
+    },
+    'answer to life': () => {
+      resultsList.insertBefore(
+        makeEggCard('42', 'The Answer to Life, the Universe, and Everything',
+          'Deep Thought computed this answer over 7.5 million years. The question, however, remains unknown.'),
+        resultsList.firstChild
+      );
+    },
+    'bloxdhub': () => {
+      resultsList.insertBefore(
+        makeEggCard('🌐', 'You found the source!',
+          'BloxdHub Browser is a browser simulation built with vanilla HTML, CSS, and JavaScript. It supports tabs, back/forward navigation, DuckDuckGo search integration, and a handful of secret easter eggs. 🎉'),
+        resultsList.firstChild
+      );
+    },
+    'is it friday': () => {
+      const today = WEEK_DAYS[new Date().getDay()];
+      const isFri = today === 'Friday';
+      resultsList.insertBefore(
+        makeEggCard(isFri ? '🎉 YES!' : '😔 No.', isFri ? 'It IS Friday!' : `It is ${today}.`,
+          isFri ? 'TGIF! Enjoy your weekend!' : `${today} is not Friday. Hang in there!`),
+        resultsList.firstChild
+      );
+    },
+    'is it friday?': () => SEARCH_EGGS['is it friday'](),
+    'never gonna give you up': () => {
+      resultsList.insertBefore(
+        makeEggCard('🎵', 'Never Gonna Give You Up – Rick Astley',
+          'Never gonna give you up, never gonna let you down, never gonna run around and desert you… You\'ve been Rickrolled by BloxdHub! 😄'),
+        resultsList.firstChild
+      );
+    },
+    'it is wednesday my dudes': () => {
+      resultsList.insertBefore(
+        makeEggCard('🐸', 'IT IS WEDNESDAY MY DUDES', 'AH HHHHHHHHHHHHH'),
+        resultsList.firstChild
+      );
+    },
+  };
+
+  function injectSearchEasterEgg(query) {
+    const key = query.trim().toLowerCase();
+    if (SEARCH_EGGS[key]) SEARCH_EGGS[key]();
+  }
 
   /* ── Bootstrap: open a first tab ─────────────────────────────────────── */
   createTab();
