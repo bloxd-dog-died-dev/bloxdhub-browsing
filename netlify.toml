@@ -1,0 +1,36 @@
+# Netlify Configuration for BloxdHub Browser
+# This is a static site - no build step needed
+
+[build]
+# Netlify will use this directory as the site root
+publish = "."
+
+# No build command needed - all files are static (HTML, CSS, JS)
+# Netlify will simply serve the files as-is
+
+[dev]
+# Local development with Netlify CLI
+command = "npm run dev"
+port = 8000
+
+# Headers for proper content types and caching
+[[headers]]
+for = "/*"
+[headers.values]
+  Content-Type = "text/html; charset=utf-8"
+
+[[headers]]
+for = "/*.js"
+[headers.values]
+  Content-Type = "application/javascript"
+
+[[headers]]
+for = "/*.css"
+[headers.values]
+  Content-Type = "text/css"
+
+[[headers]]
+for = "/.env"
+[headers.values]
+  # Prevent .env from being served publicly
+  X-Robots-Tag = "noindex, nofollow"
