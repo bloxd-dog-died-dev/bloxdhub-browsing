@@ -1,11 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../utils/supabase';
+import { supabase, testConnection } from '../utils/supabase';
 
 export default function ResultsPage({ tab, recaptchaToken, onRecaptchaToken }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [connectionStatus, setConnectionStatus] = useState(null);
+
+  // Test connection on mount
+  useEffect(() => {
+    async function checkConnection() {
+      const result = await testConnection();
+      setConnectionStatus(result);
+      if (!result.success) {
+        setError(`⚠️ Supabase Connection Failed: ${result.error}`);
+      }
+    }
+    checkConnection();
+  }, []);
 
   useEffect(() => {
     if (tab?.url?.startsWith('bloxdhub-search:')) {
@@ -17,6 +30,11 @@ export default function ResultsPage({ tab, recaptchaToken, onRecaptchaToken }) {
 
   const performSearch = async (query) => {
     if (!query.trim()) return;
+
+    if (!supabase || !connectionStatus?.success) {
+      setError('❌ Not connected to Supabase. Check your .env.local configuration.');
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -30,7 +48,7 @@ export default function ResultsPage({ tab, recaptchaToken, onRecaptchaToken }) {
         .limit(10);
 
       if (err) {
-        setError('Error searching knowledge base: ' + err.message);
+        setError('❌ Error searching knowledge base: ' + err.message);
         setResults([]);
       } else {
         setResults(data || []);
@@ -39,7 +57,7 @@ export default function ResultsPage({ tab, recaptchaToken, onRecaptchaToken }) {
         }
       }
     } catch (err) {
-      setError('Connection error: ' + err.message);
+      setError('❌ Connection error: ' + err.message);
       setResults([]);
     } finally {
       setLoading(false);
