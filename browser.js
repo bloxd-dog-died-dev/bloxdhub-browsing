@@ -125,40 +125,38 @@
     return recaptchaToken !== '';  // Must have a valid token
   }
 
-  // ── AI-Based Search Engine ──────────────────────────────────────────
-  // Generates contextual results based on the search query
-  const RESULT_TYPES = ['Tutorial', 'Documentation', 'Guide', 'Example', 'Best Practices', 'Reference', 'FAQ', 'Tips & Tricks'];
-  
-  function generateAIResult(query, index) {
-    const titles = [
-      `${query} - Complete ${RESULT_TYPES[index % RESULT_TYPES.length]}`,
-      `Learn ${query} - Beginner to Advanced`,
-      `${query} Tips & Best Practices`,
-      `${query} Step-by-Step Guide`,
-      `Mastering ${query}`,
-      `${query} for Developers`,
-      `Advanced ${query} Techniques`,
-      `Getting Started with ${query}`
-    ];
-    
-    const snippets = [
-      `Comprehensive guide to ${query.toLowerCase()} with practical examples and real-world use cases.`,
-      `Step-by-step ${query.toLowerCase()} tutorial covering all essential concepts and techniques.`,
-      `Learn how to use ${query.toLowerCase()} effectively in your projects and workflows.`,
-      `Advanced ${query.toLowerCase()} techniques, optimization strategies, and performance tips.`,
-      `Common mistakes and how to avoid them when working with ${query.toLowerCase()}.`,
-      `${query} fundamentals explained clearly for developers of all levels.`,
-      `Practical examples and ready-to-use code snippets for ${query.toLowerCase()}.`,
-      `Expert tips and tricks for improving your ${query.toLowerCase()} skills and productivity.`,
-      `Understanding the core concepts behind ${query.toLowerCase()} technology.`,
-      `Real-world applications and use cases of ${query.toLowerCase()} in production.`
-    ];
-    
-    return {
-      title: titles[index % titles.length],
-      url: `https://bloxdhub.search/${query.replace(/\s+/g, '-')}-${index}`,
-      snippet: snippets[index % snippets.length]
-    };
+  // ── Supabase Integration ──────────────────────────────────────────
+  let supabaseClient = null;
+  let supabaseConfig = {
+    url: '',
+    key: ''
+  };
+
+  function loadSupabaseConfig() {
+    fetch('.env.local')
+      .then(r => r.text())
+      .then(text => {
+        const lines = text.split('\n');
+        lines.forEach(line => {
+          if (line.startsWith('SUPABASE_URL=')) {
+            supabaseConfig.url = line.split('=')[1]?.trim();
+          }
+          if (line.startsWith('SUPABASE_PUBLISHABLE_KEY=')) {
+            supabaseConfig.key = line.split('=')[1]?.trim();
+          }
+        });
+        if (supabaseConfig.url && supabaseConfig.key) {
+          initializeSupabaseClient();
+        }
+      })
+      .catch(err => console.log('Could not load Supabase config from .env.local'));
+  }
+
+  function initializeSupabaseClient() {
+    if (window.supabase && supabaseConfig.url && supabaseConfig.key) {
+      supabaseClient = window.supabase.createClient(supabaseConfig.url, supabaseConfig.key);
+      console.log('Supabase client initialized');
+    }
   }
 
   /* ── Tab model ──────────────────────────────────────────────────────── */
@@ -501,25 +499,51 @@
   }
 
   /**
-   * Performs an AI-based search that generates contextual results.
-   * Returns dynamically generated results based on the search query.
+   * Performs a search against the Supabase knowledge base.
+   * Queries the 'knowledge_base' table for matching articles.
    */
-  function performLocalSearch(query) {
+  async function performLocalSearch(query) {
     return new Promise((resolve) => {
-      setTimeout(() => {
-        // Generate 5-10 AI-powered results for any query
-        const numResults = 5 + Math.floor(Math.random() * 5);
-        const results = [];
-        
-        for (let i = 0; i < numResults; i++) {
-          results.push(generateAIResult(query, i));
-        }
-
+      if (!supabaseClient) {
+        console.log('Supabase client not initialized, using fallback results');
         resolve({
-          localResults: results,
+          localResults: [{
+            title: 'Knowledge Base Unavailable',
+            url: 'https://bloxdhub.search/offline',
+            snippet: 'The knowledge base is currently offline. Please check your Supabase configuration.'
+          }],
           query: query
         });
-      }, 200 + Math.random() * 300); // Simulate processing time
+        return;
+      }
+
+      supabaseClient
+        .from('knowledge_base')
+        .select('id, title, url, snippet')
+        .or(`title.ilike.%${query}%,snippet.ilike.%${query}%,content.ilike.%${query}%`)
+        .limit(10)
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Supabase search error:', error);
+            resolve({ localResults: [], query: query });
+            return;
+          }
+          
+          const results = (data || []).map(item => ({
+            title: item.title,
+            url: item.url,
+            snippet: item.snippet
+          }));
+
+          resolve({
+            localResults: results,
+            query: query
+          });
+        })
+        .catch(err => {
+          console.error('Supabase fetch error:', err);
+          resolve({ localResults: [], query: query });
+        });
     });
   }
 
@@ -547,7 +571,7 @@
     // Error fallback
     if (items.length === 0) {
       resultsError.style.display = 'block';
-      resultsError.textContent = 'No results found. Try searching for anything - AI will generate relevant results!';
+      resultsError.textContent = 'No results found in knowledge base. Try different keywords.';
     }
 
     // Easter egg injection (runs after normal results render)
@@ -1078,4 +1102,5 @@
   createTab();
   devtools.init();
   loadConfig();  // Load reCAPTCHA configuration from .env
+  loadSupabaseConfig();  // Load Supabase configuration from .env.local
 })();
