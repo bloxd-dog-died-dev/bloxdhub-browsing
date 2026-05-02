@@ -5,6 +5,7 @@ import Navigation from './components/Navigation';
 import NewTabPage from './components/NewTabPage';
 import ResultsPage from './components/ResultsPage';
 import BrowserFrame from './components/BrowserFrame';
+import DiagnosticsPage from './components/DiagnosticsPage';
 import './App.css';
 
 export default function App() {
@@ -53,8 +54,8 @@ export default function App() {
   }, []);
 
   const isSearchQuery = (input) => {
-    const search_base = 'bloxdhub-search:';
-    if (input.startsWith(search_base)) return true;
+    if (input.startsWith('bloxdhub-diag:')) return true;
+    if (input.startsWith('bloxdhub-search:')) return true;
     if (/^https?:\/\//i.test(input)) return false;
     if (/^(localhost|127\.0\.0\.1)(:\d+)?(\/.*)?$/i.test(input)) return false;
     if (/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(\/.*)?$/i.test(input)) return false;
@@ -63,6 +64,7 @@ export default function App() {
 
   const resolveInput = (input) => {
     if (!input) return '';
+    if (input.startsWith('bloxdhub-diag:')) return input;
     if (input.startsWith('bloxdhub-search:')) return input;
     if (/^https?:\/\//i.test(input)) return input;
     if (/^(localhost|127\.0\.0\.1)(:\d+)?(\/.*)?$/i.test(input)) return 'http://' + input;
@@ -83,7 +85,9 @@ export default function App() {
       updateTab(activeTab.id, { history: newHistory, historyIndex: newHistory.length - 1 });
     }
 
-    if (url.startsWith('bloxdhub-search:')) {
+    if (url.startsWith('bloxdhub-diag:')) {
+      updateTab(activeTab.id, { view: 'diagnostics', title: 'Diagnostics', favicon: '🔧' });
+    } else if (url.startsWith('bloxdhub-search:')) {
       const query = decodeURIComponent(url.slice('bloxdhub-search:'.length));
       updateTab(activeTab.id, { view: 'results', title: query + ' – BloxdHub', favicon: '🔍' });
     } else {
@@ -125,6 +129,18 @@ export default function App() {
 
   const activeTab = getActiveTab();
 
+  // Handle keyboard shortcut to open diagnostics
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.altKey && e.key === 'd') {
+        e.preventDefault();
+        navigate('bloxdhub-diag:');
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [navigate]);
+
   return (
     <div className="browser-window">
       <TabBar tabs={tabs} activeTabId={activeTabId} onSwitchTab={switchTab} onCloseTab={closeTab} onNewTab={createTab} />
@@ -133,6 +149,7 @@ export default function App() {
       <div className="browser-content">
         {activeTab?.view === 'newtab' && <NewTabPage onSearch={(q) => navigate('bloxdhub-search:' + encodeURIComponent(q))} />}
         {activeTab?.view === 'results' && <ResultsPage tab={activeTab} recaptchaToken={recaptchaToken} onRecaptchaToken={setRecaptchaToken} />}
+        {activeTab?.view === 'diagnostics' && <DiagnosticsPage />}
         {activeTab?.view === 'frame' && <BrowserFrame url={activeTab?.url} />}
       </div>
     </div>
