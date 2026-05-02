@@ -1,5 +1,13 @@
-# Netlify configuration for BloxdHub Browser (static site)
+# Netlify configuration for BloxdHub Browser (React + Vite)
 [build]
-  # Static site - all files in root directory
-  publish = "."
-  # No build command - site is already built
+  command = "npm run build"
+  publish = "dist"
+
+[env]
+  VITE_SUPABASE_URL = "https://nwrvyvofhvmdxjzavwux.supabase.co"
+  VITE_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_YYI1dvfcHHFv_c-5zRKUew_73TRnk9A"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
